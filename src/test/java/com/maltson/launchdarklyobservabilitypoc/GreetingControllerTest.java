@@ -10,16 +10,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(GreetingController.class)
@@ -54,31 +53,40 @@ class GreetingControllerTest {
 	void shouldReturnDefaultMessage() throws Exception {
 		when(client.getBooleanValue(eq("elegant-greeting"), anyBoolean(), any())).thenReturn(false);
 
-		this.mockMvc.perform(get("/greeting"))
+		MvcResult result = this.mockMvc.perform(get("/greeting"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Hello, World!")));
+				.andReturn();
+
+		assertThat(result.getResponse().getContentAsString())
+				.contains("Hello, World!");
 	}
 
 	@Test
 	void shouldReturnTailoredMessage() throws Exception {
 		when(client.getBooleanValue(eq("elegant-greeting"), anyBoolean(), any())).thenReturn(false);
 
-		this.mockMvc.perform(get("/greeting").param("name", "Spring Community"))
+		MvcResult result = this.mockMvc.perform(get("/greeting").param("name", "Spring Community"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Hello, Spring Community!")));
+				.andReturn();
+
+		assertThat(result.getResponse().getContentAsString())
+				.contains("Hello, Spring Community!");
 	}
 
 	@Test
 	void shouldReturnElegantMessage() throws Exception {
 		when(client.getBooleanValue(eq("elegant-greeting"), anyBoolean(), any())).thenReturn(true);
 
-		// Since we can't easily control time in this simple setup, we check for any of the valid greetings
-		this.mockMvc.perform(get("/greeting").param("name", "My Lord"))
+		MvcResult result = this.mockMvc.perform(get("/greeting").param("name", "My Lord"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(anyOf(
-						containsString("Top of the morning, My Lord!"),
-						containsString("Good afternoon, My Lord. A pleasure to see you."),
-						containsString("Good evening, My Lord. I hope you had a splendid day.")
-				)));
+				.andReturn();
+
+		// Since we can't easily control time in this simple setup, we check for any of the valid greetings
+		assertThat(result.getResponse().getContentAsString())
+				.satisfiesAnyOf(
+						content -> assertThat(content).contains("Top of the morning, My Lord!"),
+						content -> assertThat(content).contains("Good afternoon, My Lord. A pleasure to see you."),
+						content -> assertThat(content).contains("Good evening, My Lord. I hope you had a splendid day.")
+				);
 	}
 }
