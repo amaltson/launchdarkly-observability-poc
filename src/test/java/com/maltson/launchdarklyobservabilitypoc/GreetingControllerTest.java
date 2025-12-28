@@ -42,6 +42,11 @@ class GreetingControllerTest {
 		public Client client() {
 			return mock(Client.class);
 		}
+
+		@Bean
+		public io.opentelemetry.api.trace.Tracer tracer() {
+			return io.opentelemetry.api.OpenTelemetry.noop().getTracer("test");
+		}
 	}
 
 	@BeforeEach
