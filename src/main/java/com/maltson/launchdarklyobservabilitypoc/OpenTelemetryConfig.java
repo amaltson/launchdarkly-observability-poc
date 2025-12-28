@@ -1,15 +1,15 @@
 package com.maltson.launchdarklyobservabilitypoc;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.ResourceAttributes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,18 +43,24 @@ public class OpenTelemetryConfig {
         System.out.println("Configuring OpenTelemetry with OTLP endpoint: " + otlpEndpoint);
 
         // Build resource attributes
-        io.opentelemetry.api.common.AttributesBuilder resourceAttributes = Attributes.builder()
-                .put(ResourceAttributes.SERVICE_NAME, serviceName);
+        AttributesBuilder resourceAttributes = Attributes.builder()
+                .put("service.name", serviceName);
 
         if (sdkKey != null && !sdkKey.isEmpty()) {
-            resourceAttributes.put("launchdarkly.sdk.key", sdkKey);
+            resourceAttributes.put("highlight.project_id", sdkKey);
         }
 
         Resource resource = Resource.create(resourceAttributes.build());
 
-        // Configure OTLP exporter
-        OtlpGrpcSpanExporter spanExporter = OtlpGrpcSpanExporter.builder()
-                .setEndpoint(otlpEndpoint)
+        // Ensure endpoint has the correct path for traces
+        String tracesEndpoint = otlpEndpoint;
+        if (!tracesEndpoint.endsWith("/v1/traces")) {
+            tracesEndpoint = tracesEndpoint + "/v1/traces";
+        }
+
+        // Configure OTLP exporter (HTTP)
+        OtlpHttpSpanExporter spanExporter = OtlpHttpSpanExporter.builder()
+                .setEndpoint(tracesEndpoint)
                 .build();
 
         // Build tracer provider
